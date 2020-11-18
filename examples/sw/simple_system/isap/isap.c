@@ -1,6 +1,7 @@
 #include "api.h"
 #include "isap.h"
 #include "ascon.h"
+#include <string.h>
 
 const unsigned char ISAP_IV_A[] = {0x01,ISAP_K,ISAP_rH,ISAP_rB,ISAP_sH,ISAP_sB,ISAP_sE,ISAP_sK};
 const unsigned char ISAP_IV_KA[] = {0x02,ISAP_K,ISAP_rH,ISAP_rB,ISAP_sH,ISAP_sB,ISAP_sE,ISAP_sK};
