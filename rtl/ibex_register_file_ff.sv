@@ -10,10 +10,15 @@
  * This register file is based on flip flops. Use this register file when
  * targeting FPGA synthesis or Verilator simulation.
  */
+
+/* verilator lint_off IMPORTSTAR */
+import ibex_ascon_defines::*;
+/* verilator lint_off IMPORTSTAR */
 module ibex_register_file_ff #(
     parameter bit          RV32E             = 0,
     parameter int unsigned DataWidth         = 32,
-    parameter bit          DummyInstructions = 0
+    parameter bit          DummyInstructions = 0,
+    parameter bit          Ascon_Instr = 0
 ) (
     // Clock and Reset
     input  logic                 clk_i,
@@ -34,7 +39,13 @@ module ibex_register_file_ff #(
     // Write port W1
     input  logic [4:0]           waddr_a_i,
     input  logic [DataWidth-1:0] wdata_a_i,
-    input  logic                 we_a_i
+    input  logic                 we_a_i,
+
+    // ASCON read port
+    output ascon_state_t           rdata_ascon_o,
+    // ASCON write port
+    input ascon_state_t            wdata_ascon_i,
+    input logic                    we_ascon_update_i
 
 );
 
@@ -45,19 +56,92 @@ module ibex_register_file_ff #(
   logic [NUM_WORDS-1:1][DataWidth-1:0] rf_reg_q;
   logic [NUM_WORDS-1:1]                we_a_dec;
 
+  // ASCON definitions
+
+  /* verilator lint_off UNUSED */
+  /* verilator lint_off UNDRIVEN */
+  /* verilator lint_off LITENDIAN */
+  logic [0 : NUM_WORDS -1] ASCON_REGISTER_BITMAP;
+  logic [NUM_WORDS -1 :0][DataWidth -1:0] ascon_port_reg_array;
+  /* verilator lint_on LITENDIAN */
+  /* verilator lint_on UNUSED */
+  /* verilator lint_on UNDRIVEN */
+  // generate register bitmap for RV32E or RV32
+  generate
+    if (RV32E == 1) begin
+      assign ASCON_REGISTER_BITMAP = ASCON_REGISTER_BITMAP_RV32E;
+    end else begin
+      assign ASCON_REGISTER_BITMAP = ASCON_REGISTER_BITMAP_RV32;
+    end
+  endgenerate
+  // ASCON assignments
+  assign rdata_ascon_o.x0.reg_view.x_hi  = rf_reg_q[12];
+  assign rdata_ascon_o.x0.reg_view.x_low = rf_reg_q[13];
+  assign rdata_ascon_o.x1.reg_view.x_hi  = rf_reg_q[14];
+  assign rdata_ascon_o.x1.reg_view.x_low = rf_reg_q[15];
+  assign rdata_ascon_o.x2.reg_view.x_hi  = rf_reg_q[16];
+  assign rdata_ascon_o.x2.reg_view.x_low = rf_reg_q[17];
+  assign rdata_ascon_o.x3.reg_view.x_hi  = rf_reg_q[28];
+  assign rdata_ascon_o.x3.reg_view.x_low = rf_reg_q[29];
+  assign rdata_ascon_o.x4.reg_view.x_hi  = rf_reg_q[30];
+  assign rdata_ascon_o.x4.reg_view.x_low = rf_reg_q[31];
+
+
+  // TODO change this mapping depending on RV32 or RV32E
+
+  assign ascon_port_reg_array[12] = wdata_ascon_i.x0.reg_view.x_hi;
+  assign ascon_port_reg_array[13] = wdata_ascon_i.x0.reg_view.x_low;
+  assign ascon_port_reg_array[14] = wdata_ascon_i.x1.reg_view.x_hi;
+  assign ascon_port_reg_array[15] = wdata_ascon_i.x1.reg_view.x_low;
+  assign ascon_port_reg_array[16] = wdata_ascon_i.x2.reg_view.x_hi;
+  assign ascon_port_reg_array[17] = wdata_ascon_i.x2.reg_view.x_low;
+  assign ascon_port_reg_array[28] = wdata_ascon_i.x3.reg_view.x_hi;
+  assign ascon_port_reg_array[29] = wdata_ascon_i.x3.reg_view.x_low;
+  assign ascon_port_reg_array[30] = wdata_ascon_i.x4.reg_view.x_hi;
+  assign ascon_port_reg_array[31] = wdata_ascon_i.x4.reg_view.x_low;
+
+
+
+
+
   always_comb begin : we_a_decoder
     for (int unsigned i = 1; i < NUM_WORDS; i++) begin
       we_a_dec[i] = (waddr_a_i == 5'(i)) ?  we_a_i : 1'b0;
     end
   end
 
+  if (Ascon_Instr == 1) begin
+  // Generate Ascon connections to register file
   // No flops for R0 as it's hard-wired to 0
-  for (genvar i = 1; i < NUM_WORDS; i++) begin : g_rf_flops
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-      if (!rst_ni) begin
-        rf_reg_q[i] <= '0;
-      end else if(we_a_dec[i]) begin
-        rf_reg_q[i] <= wdata_a_i;
+    for (genvar i = 1; i < NUM_WORDS; i++) begin : g_rf_flops
+      always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+          rf_reg_q[i] <= '0;
+        end else begin
+          if (ASCON_REGISTER_BITMAP[i] == 1) begin
+            if (we_ascon_update_i == 1'b1) begin 
+            //update designated registers from the ASCONp block
+              rf_reg_q[i] <= ascon_port_reg_array[i];
+            end else if(we_a_dec[i] == 1'b1) begin
+              rf_reg_q[i] <= wdata_a_i;
+            end
+          end else begin
+            if(we_a_dec[i] == 1'b1) begin
+              rf_reg_q[i] <= wdata_a_i;
+            end
+          end
+        end
+      end
+    end
+  end else begin
+  // No flops for R0 as it's hard-wired to 0
+    for (genvar i = 1; i < NUM_WORDS; i++) begin : g_rf_flops
+      always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+          rf_reg_q[i] <= '0;
+        end else if(we_a_dec[i]) begin
+          rf_reg_q[i] <= wdata_a_i;
+        end
       end
     end
   end

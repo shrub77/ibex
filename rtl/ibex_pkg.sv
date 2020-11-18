@@ -46,7 +46,8 @@ typedef enum logic [6:0] {
   OPCODE_BRANCH   = 7'h63,
   OPCODE_JALR     = 7'h67,
   OPCODE_JAL      = 7'h6f,
-  OPCODE_SYSTEM   = 7'h73
+  OPCODE_SYSTEM   = 7'h73,
+  OPCODE_ASCON    = 7'h0b
 } opcode_e;
 
 
@@ -504,5 +505,7 @@ parameter int unsigned CSR_MTIX_BIT      = 7;
 parameter int unsigned CSR_MEIX_BIT      = 11;
 parameter int unsigned CSR_MFIX_BIT_LOW  = 16;
 parameter int unsigned CSR_MFIX_BIT_HIGH = 30;
+
+
 
 endpackage

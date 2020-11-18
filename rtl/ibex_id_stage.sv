@@ -22,6 +22,7 @@ module ibex_id_stage #(
     parameter ibex_pkg::rv32b_e RV32B           = ibex_pkg::RV32BNone,
     parameter bit               DataIndTiming   = 1'b0,
     parameter bit               BranchTargetALU = 0,
+    parameter bit               Ascon_Instr     = 0,
     parameter bit               SpecBranch      = 0,
     parameter bit               WritebackStage  = 0,
     parameter bit               BranchPredictor = 0
@@ -180,10 +181,16 @@ module ibex_id_stage #(
                                                          // access to finish before proceeding
     output logic                      perf_mul_wait_o,
     output logic                      perf_div_wait_o,
-    output logic                      instr_id_done_o
+    output logic                      instr_id_done_o,
+
+    // ASCON-p connections to reg file and decoder
+    output ascon_meta_t    ascon_meta_info_o,
+    output  logic          ascon_instruction_ex_o
+   // input logic          ascon_update_done_o
 );
 
   import ibex_pkg::*;
+  import ibex_ascon_defines::*;
 
   // Decoder/Controller, ID stage internal signals
   logic        illegal_insn_dec;
@@ -416,7 +423,8 @@ module ibex_id_stage #(
       .RV32E           ( RV32E           ),
       .RV32M           ( RV32M           ),
       .RV32B           ( RV32B           ),
-      .BranchTargetALU ( BranchTargetALU )
+      .BranchTargetALU ( BranchTargetALU ),
+      .Ascon_Instr     ( Ascon_Instr     )
   ) decoder_i (
       .clk_i                           ( clk_i                ),
       .rst_ni                          ( rst_ni               ),
@@ -487,7 +495,11 @@ module ibex_id_stage #(
 
       // jump/branches
       .jump_in_dec_o                   ( jump_in_dec          ),
-      .branch_in_dec_o                 ( branch_in_dec        )
+      .branch_in_dec_o                 ( branch_in_dec        ),
+
+      // ASCON
+      .ascon_instruction_ex_o          (ascon_instruction_ex_o),
+      .ascon_meta_info_o    (ascon_meta_info_o)
   );
 
   /////////////////////////////////

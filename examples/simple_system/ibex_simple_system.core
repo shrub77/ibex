@@ -74,6 +74,12 @@ parameters:
     default: 0
     description: "Enables separate branch target ALU (increasing branch performance EXPERIMENTAL)"
 
+  Ascon_Instr:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enable the ASCON accelerator block"
+
   WritebackStage:
     datatype: int
     paramtype: vlogparam
@@ -125,6 +131,7 @@ targets:
       - ICache
       - ICacheECC
       - BranchTargetALU
+      - Ascon_Instr
       - WritebackStage
       - SecureIbex
       - BranchPredictor

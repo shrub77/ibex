@@ -13,11 +13,15 @@
 
 `include "prim_assert.sv"
 
+/* verilator lint_off IMPORTSTAR */
+import ibex_ascon_defines::*;
+/* verilator lint_off IMPORTSTAR */
 module ibex_decoder #(
     parameter bit RV32E               = 0,
     parameter ibex_pkg::rv32m_e RV32M = ibex_pkg::RV32MFast,
     parameter ibex_pkg::rv32b_e RV32B = ibex_pkg::RV32BNone,
-    parameter bit BranchTargetALU     = 0
+    parameter bit BranchTargetALU     = 0,
+    parameter bit Ascon_Instr = 0
 ) (
     input  logic                 clk_i,
     input  logic                 rst_ni,
@@ -94,10 +98,16 @@ module ibex_decoder #(
 
     // jump/branches
     output logic                 jump_in_dec_o,         // jump is being calculated in ALU
-    output logic                 branch_in_dec_o
+    output logic                 branch_in_dec_o,
+
+    // ASCON
+
+    output logic           ascon_instruction_ex_o,
+    output ascon_meta_t    ascon_meta_info_o
 );
 
   import ibex_pkg::*;
+  import ibex_ascon_defines::*;
 
   logic        illegal_insn;
   logic        illegal_reg_rv32e;
@@ -120,6 +130,8 @@ module ibex_decoder #(
 
   opcode_e     opcode;
   opcode_e     opcode_alu;
+
+
 
   // To help timing the flops containing the current instruction are replicated to reduce fan-out.
   // instr_alu is used to determine the ALU control logic and associated operand/imm select signals
@@ -225,6 +237,9 @@ module ibex_decoder #(
     ecall_insn_o          = 1'b0;
     wfi_insn_o            = 1'b0;
 
+    ascon_instruction_ex_o = 1'b0;
+    ascon_meta_info_o.rounds = '0;
+    ascon_meta_info_o.roundconstant = '0;
     opcode                = opcode_e'(instr[6:0]);
 
     unique case (opcode)
@@ -326,6 +341,18 @@ module ibex_decoder #(
             illegal_insn = 1'b1;
           end
         endcase
+      end
+
+      ///////////
+      // ASCON //
+      ///////////
+
+      OPCODE_ASCON: begin
+        if(Ascon_Instr == 1'b1) begin
+          ascon_instruction_ex_o = 1'b1;
+          ascon_meta_info_o.rounds = instr_rdata_i[30:28];
+          ascon_meta_info_o.roundconstant = instr_rdata_i[27:20];
+        end
       end
 
       /////////

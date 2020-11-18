@@ -23,6 +23,7 @@ module ibex_core #(
     parameter ibex_pkg::rv32b_e   RV32B            = ibex_pkg::RV32BNone,
     parameter ibex_pkg::regfile_e RegFile          = ibex_pkg::RegFileFF,
     parameter bit                 BranchTargetALU  = 1'b0,
+    parameter bit                 Ascon_Instr      = 1'b0,
     parameter bit                 WritebackStage   = 1'b0,
     parameter bit                 ICache           = 1'b0,
     parameter bit                 ICacheECC        = 1'b0,
@@ -351,6 +352,15 @@ module ibex_core #(
   logic [31:0] rvfi_mem_addr_q;
 `endif
 
+  // ASCON
+  ascon_meta_t                      ascon_meta_info;
+  ascon_state_t                     rdata_ascon;
+  ascon_state_t                     wdata_ascon;
+  logic                             ascon_update_done;
+  logic                             ascon_instruction_ex;
+
+
+
   //////////////////////
   // Clock management //
   //////////////////////
@@ -483,6 +493,7 @@ module ibex_core #(
       .RV32M           ( RV32M           ),
       .RV32B           ( RV32B           ),
       .BranchTargetALU ( BranchTargetALU ),
+      .Ascon_Instr     ( Ascon_Instr     ),
       .DataIndTiming   ( DataIndTiming   ),
       .SpecBranch      ( SpecBranch      ),
       .WritebackStage  ( WritebackStage  ),
@@ -631,7 +642,10 @@ module ibex_core #(
       .perf_dside_wait_o            ( perf_dside_wait          ),
       .perf_mul_wait_o              ( perf_mul_wait            ),
       .perf_div_wait_o              ( perf_div_wait            ),
-      .instr_id_done_o              ( instr_id_done            )
+      .instr_id_done_o              ( instr_id_done            ),
+
+      .ascon_instruction_ex_o          (ascon_instruction_ex),
+      .ascon_meta_info_o    (ascon_meta_info)
   );
 
   // for RVFI only
@@ -640,7 +654,8 @@ module ibex_core #(
   ibex_ex_block #(
       .RV32M                    ( RV32M                    ),
       .RV32B                    ( RV32B                    ),
-      .BranchTargetALU          ( BranchTargetALU          )
+      .BranchTargetALU          ( BranchTargetALU          ),
+      .Ascon_Instr              ( Ascon_Instr              )
   ) ex_block_i (
       .clk_i                    ( clk                      ),
       .rst_ni                   ( rst_ni                   ),
@@ -679,7 +694,13 @@ module ibex_core #(
       .branch_target_o          ( branch_target_ex         ), // to IF
       .branch_decision_o        ( branch_decision          ), // to ID
 
-      .ex_valid_o               ( ex_valid                 )
+      .ex_valid_o               ( ex_valid                 ),
+
+      .ascon_meta_info_i (ascon_meta_info),
+      .rdata_ascon_i (rdata_ascon),
+      .wdata_ascon_o (wdata_ascon),
+      .ascon_instruction_ex_i (ascon_instruction_ex        ),
+      .ascon_update_done_o(ascon_update_done)          
   );
 
   /////////////////////
@@ -836,7 +857,8 @@ module ibex_core #(
     ibex_register_file_ff #(
         .RV32E             ( RV32E             ),
         .DataWidth         ( RegFileDataWidth  ),
-        .DummyInstructions ( DummyInstructions )
+        .DummyInstructions ( DummyInstructions ),
+        .Ascon_Instr       ( Ascon_Instr       )
     ) register_file_i (
         .clk_i            ( clk_i           ),
         .rst_ni           ( rst_ni          ),
@@ -850,7 +872,10 @@ module ibex_core #(
         .rdata_b_o        ( rf_rdata_b_ecc  ),
         .waddr_a_i        ( rf_waddr_wb     ),
         .wdata_a_i        ( rf_wdata_wb_ecc ),
-        .we_a_i           ( rf_we_wb        )
+        .we_a_i           ( rf_we_wb        ),
+        .rdata_ascon_o          (  rdata_ascon          ),
+        .wdata_ascon_i          (  wdata_ascon          ),
+        .we_ascon_update_i      (  ascon_update_done    )
     );
   end else if (RegFile == RegFileFPGA) begin : gen_regfile_fpga
     ibex_register_file_fpga #(

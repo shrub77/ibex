@@ -18,6 +18,22 @@ int puts(const char *str) {
   return 0;
 }
 
+void putbyte(unsigned char b)
+{
+  int cur_digit;
+  // Iterate through h taking top 4 bits each time and outputting ASCII of hex
+  // digit for those 4 bits
+  for (int i = 0; i < 2; i++) {
+    cur_digit = b >> 4;
+
+    if (cur_digit < 10)
+      putchar('0' + cur_digit);
+    else
+      putchar('A' - 10 + cur_digit);
+
+    b <<= 4;
+  }
+}
 void puthex(uint32_t h) {
   int cur_digit;
   // Iterate through h taking top 4 bits each time and outputting ASCII of hex

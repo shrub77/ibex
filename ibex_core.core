@@ -13,6 +13,7 @@ filesets:
       - lowrisc:prim:lfsr
       - lowrisc:ibex:ibex_pkg
       - lowrisc:ibex:ibex_icache
+      - iaik:ibex:ascon_pkg
     files:
       - rtl/ibex_alu.sv
       - rtl/ibex_branch_predict.sv
@@ -22,6 +23,7 @@ filesets:
       - rtl/ibex_csr.sv
       - rtl/ibex_counter.sv
       - rtl/ibex_decoder.sv
+      - rtl/ibex_asconp.sv
       - rtl/ibex_ex_block.sv
       - rtl/ibex_fetch_fifo.sv
       - rtl/ibex_id_stage.sv

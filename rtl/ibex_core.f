@@ -1,4 +1,6 @@
 ibex_pkg.sv
+ibex_ascon_defines.sv
+ibex_ascon_defines.sv
 ibex_alu.sv
 ibex_compressed_decoder.sv
 ibex_controller.sv

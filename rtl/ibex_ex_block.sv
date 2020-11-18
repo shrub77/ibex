@@ -8,10 +8,15 @@
  *
  * Execution block: Hosts ALU and MUL/DIV unit
  */
+
+/* verilator lint_off IMPORTSTAR */
+import ibex_ascon_defines::*;
+/* verilator lint_off IMPORTSTAR */
 module ibex_ex_block #(
     parameter ibex_pkg::rv32m_e RV32M           = ibex_pkg::RV32MFast,
     parameter ibex_pkg::rv32b_e RV32B           = ibex_pkg::RV32BNone,
-    parameter bit               BranchTargetALU = 0
+    parameter bit               BranchTargetALU = 0,
+    parameter bit               Ascon_Instr = 0 // enable ASCON-p block
 ) (
     input  logic                  clk_i,
     input  logic                  rst_ni,
@@ -50,7 +55,14 @@ module ibex_ex_block #(
     output logic [31:0]           branch_target_o,       // to IF
     output logic                  branch_decision_o,     // to ID
 
-    output logic                  ex_valid_o             // EX has valid output
+    output logic                  ex_valid_o,             // EX has valid output
+
+    // ASCON assignments
+    input ascon_meta_t    ascon_meta_info_i,
+    input ascon_state_t   rdata_ascon_i,
+    output ascon_state_t  wdata_ascon_o,
+    input  logic          ascon_instruction_ex_i,
+    output logic          ascon_update_done_o
 );
 
   import ibex_pkg::*;
@@ -190,6 +202,21 @@ module ibex_ex_block #(
         .multdiv_result_o   ( multdiv_result        )
     );
   end
+
+  /////////////
+  // ASCON-p //
+  /////////////
+  if (Ascon_Instr == 1) begin : ascon
+    ibex_asconp ascon_i
+    (
+      .ascon_meta_info_i      ( ascon_meta_info_i      ),
+      .ascon_state_i          ( rdata_ascon_i          ),
+      .ascon_state_o          ( wdata_ascon_o          ),
+      .ascon_instruction_en_i ( ascon_instruction_ex_i ),
+      .ascon_update_done_o    ( ascon_update_done_o    )
+    );
+  end
+
 
   // Multiplier/divider may require multiple cycles. The ALU output is valid in the same cycle
   // unless the intermediate result register is being written (which indicates this isn't the

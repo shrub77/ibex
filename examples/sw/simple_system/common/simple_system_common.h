@@ -37,6 +37,14 @@ int puts(const char *str);
  */
 void puthex(uint32_t h);
 
+
+/**
+ * Write a byte in hexidecimal format
+ * 
+ * @param b Byte to write
+ */ 
+void putbyte(unsigned char b);
+
 /**
  * Immediately halts the simulation
  */

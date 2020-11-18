@@ -8,13 +8,13 @@ COMMON_SRCS = $(wildcard $(COMMON_DIR)/*.c)
 INCS := -I$(COMMON_DIR)
 
 # ARCH = rv32im # to disable compressed instructions
-ARCH ?= rv32imc
+ARCH ?= rv32im
 
 ifdef PROGRAM
 PROGRAM_C := $(PROGRAM).c
 endif
 
-SRCS = $(COMMON_SRCS) $(PROGRAM_C) $(EXTRA_SRCS)
+SRCS = $(COMMON_SRCS) $(EXTRA_SRCS)
 
 C_SRCS = $(filter %.c, $(SRCS))
 ASM_SRCS = $(filter %.S, $(SRCS))
@@ -27,7 +27,7 @@ OBJDUMP ?= $(subst gcc,objdump,$(wordlist 1,1,$(CC)))
 LINKER_SCRIPT ?= $(COMMON_DIR)/link.ld
 CRT ?= $(COMMON_DIR)/crt0.S
 CFLAGS ?= -march=$(ARCH) -mabi=ilp32 -static -mcmodel=medany -Wall -g -Os\
-	-fvisibility=hidden -nostdlib -nostartfiles -ffreestanding $(PROGRAM_CFLAGS)
+	-fvisibility=hidden -nostdlib -nostartfiles -ffreestanding -B /home/rishub/src/riscv-gnu-toolchain/build/opt/riscv32-unknown-linux-gnu/bin $(PROGRAM_CFLAGS)
 
 OBJS := ${C_SRCS:.c=.o} ${ASM_SRCS:.S=.o} ${CRT:.S=.o}
 DEPS = $(OBJS:%.o=%.d)
